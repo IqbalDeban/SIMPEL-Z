@@ -24,7 +24,7 @@
     </main>
 
     <footer class="text-center text-gray-600 py-4 border-t mt-10">
-        &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+        &copy; 2025 Simple - Z. All rights reserved.
     </footer>
 </body>
 </html>

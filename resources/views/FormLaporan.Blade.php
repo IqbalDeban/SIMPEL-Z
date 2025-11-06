@@ -18,11 +18,11 @@
 }
 </style>
 
-<div class="container mx-auto py-10 px-6">
+<div class="flex justify-center items-start min-h-screen py-10 px-6 bg-gray-100">
 
     <!-- Form Section -->
-    <div id="formSection" class="animate-slide-in">
-        <div class="grid lg:grid-cols-2 gap-8">
+    <div id="formSection" class="animate-slide-in w-full max-w-4xl">
+        <div class="grid lg:grid-cols-1 gap-8">
             <div class="glass-effect rounded-2xl shadow-xl p-8 card-hover bg-white">
                 <div class="flex items-center mb-6">
                     <div class="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 rounded-lg mr-4">
