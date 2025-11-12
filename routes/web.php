@@ -3,33 +3,23 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FormLaporanController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Di sini kamu dapat mendaftarkan semua rute web untuk aplikasi kamu.
-| Rute ini dimuat oleh RouteServiceProvider dan semuanya akan
-| ditugaskan ke grup middleware "web". Buatlah sesuatu yang hebat!
-|
-*/
-
-// === Halaman Utama ===
+// Halaman utama (opsional)
 Route::get('/', function () {
     return view('welcome');
 });
 
-// === Form Laporan Zoom ===
-
-// Menampilkan halaman form input laporan (formlaporan.blade.php)
+// Form laporan utama
 Route::get('/form-laporan', [FormLaporanController::class, 'index'])
     ->name('form.laporan');
 
-// Setelah form disubmit, validasi data & tampilkan halaman preview konfirmasi
-Route::post('/form-laporan/preview', [FormLaporanController::class, 'preview'])
-    ->name('form.preview');
-
-// Setelah dikonfirmasi, generate PDF otomatis dari template resmi instansi
+// Submit form → langsung generate PDF
 Route::post('/form-laporan/generate', [FormLaporanController::class, 'generatePDF'])
     ->name('form.generate');
 
+// Unduh file PDF berdasarkan ID laporan
+Route::get('/form-laporan/download/{id}', [FormLaporanController::class, 'downloadPDF'])
+    ->name('form.download');
+
+// Clear Session
+Route::get('/form-laporan/clear-session', [FormLaporanController::class, 'clearSession'])
+    ->name('form.clearSession');

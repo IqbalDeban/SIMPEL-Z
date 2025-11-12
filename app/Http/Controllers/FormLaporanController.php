@@ -2,68 +2,108 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Report;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 
 class FormLaporanController extends Controller
 {
+    /**
+     * Tampilkan halaman form laporan.
+     */
     public function index()
     {
-        // Tampilkan form laporan
         return view('formlaporan');
     }
 
-    public function preview(Request $request)
-    {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'nip' => 'required|string|max:255',
-            'jabatan' => 'required|string|max:255',
-            'unitKerja' => 'required|string|max:255',
-            'tanggal' => 'required|date',
-            'judul' => 'required|string|max:255',
-            'narasumber' => 'required|string|max:255',
-            'ringkasan' => 'required|string',
-            'catatan' => 'required|string',
-            'saran' => 'required|string',
-        ]);
-
-        // Simpan sementara ke session
-        session(['laporan_data' => $validated]);
-
-        // Kirim HTML template untuk preview
-        return view('partials.template_laporan', ['data' => $validated]);
-    }
-
+    /**
+     * Generate PDF dan simpan metadata ke database.
+     */
     public function generatePDF(Request $request)
     {
-        $data = session('laporan_data');
+        // 🔍 Validasi data
+        $validated = $request->validate([
+            'nama'       => 'required|string|max:255',
+            'nip'        => 'required|string|max:255',
+            'jabatan'    => 'required|string|max:255',
+            'unitKerja'  => 'required|string|max:255',
+            'tanggal'    => 'required|date',
+            'judul'      => 'required|string|max:255',
+            'narasumber' => 'required|string|max:255',
+            'ringkasan'  => 'required|string',
+            'catatan'    => 'required|string',
+            'saran'      => 'required|string',
+        ]);
 
-        if (!$data) {
-            return response()->json(['error' => 'Data laporan tidak ditemukan'], 400);
+        // 📄 Nama file PDF
+        $filename = 'Laporan_' . str_replace(' ', '_', $validated['nama']) . '_' . now()->format('Ymd_His') . '.pdf';
+        $dir = storage_path('app/public/laporan');
+
+        // 🔧 Pastikan folder laporan ada
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
         }
 
-        $pdf = Pdf::loadView('pdf.laporan', ['data' => $data])
+        // 🧾 Generate PDF
+        $pdf = Pdf::loadView('pdf.laporan', ['data' => $validated])
             ->setPaper('A4', 'portrait');
 
-        $filename = 'Laporan_' . $data['nama'] . '_' . now()->format('Ymd_His') . '.pdf';
-        $path = 'public/laporan/' . $filename;
+        // 💾 Simpan ke storage
+        $pdf->save($dir . '/' . $filename);
 
-        // Simpan file PDF ke storage
-        Storage::put($path, $pdf->output());
+        // 🗃️ Simpan metadata ke database
+        $report = Report::create([
+            'tanggal'    => $validated['tanggal'],
+            'nama'       => $validated['nama'],
+            'nip'        => $validated['nip'],
+            'jabatan'    => $validated['jabatan'],
+            'unit_kerja' => $validated['unitKerja'],
+            'judul'      => $validated['judul'],
+            'narasumber' => $validated['narasumber'],
+            'ringkasan'  => $validated['ringkasan'],
+            'catatan'    => $validated['catatan'],
+            'saran'      => $validated['saran'],
+            'pdf_path'   => 'storage/laporan/' . $filename,
+        ]);
 
-        // Jika tombol "Unduh PDF" ditekan
-        if ($request->has('download')) {
-            return response()->download(storage_path('app/' . $path))
-                             ->deleteFileAfterSend(false);
+        // 🔁 Jika request AJAX, kirim JSON
+        if ($request->ajax()) {
+            return response()->json([
+                'success'       => true,
+                'message'       => 'Laporan berhasil dikirim & PDF berhasil dibuat!',
+                'filename'      => $filename,
+                'download_link' => asset('storage/laporan/' . $filename),
+            ]);
         }
 
-        // Jika tombol "Konfirmasi & Kirim" ditekan
-        return response()->json([
-            'success' => true,
-            'message' => 'Laporan berhasil dikirim ke admin!',
-            'filename' => $filename
+        // 📥 Jika non-AJAX (fallback lama)
+        return redirect()->back()->with([
+            'success' => 'Laporan berhasil dikirim & PDF berhasil dibuat!',
+            'download_link' => route('form.download', $report->id),
         ]);
+    }
+
+    /**
+     * Unduh PDF berdasarkan ID laporan.
+     */
+    public function downloadPDF($id)
+    {
+        $report = Report::findOrFail($id);
+        $path = storage_path('app/public/laporan/' . basename($report->pdf_path));
+
+        if (!file_exists($path)) {
+            abort(404, 'File PDF tidak ditemukan.');
+        }
+
+        return response()->download($path);
+    }
+
+    /**
+     * Bersihkan session notifikasi.
+     */
+    public function clearSession()
+    {
+        session()->forget(['success', 'download_link']);
+        return response()->noContent();
     }
 }
