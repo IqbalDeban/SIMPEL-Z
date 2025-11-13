@@ -21,22 +21,25 @@ class FormLaporanController extends Controller
      */
     public function generatePDF(Request $request)
     {
-        // 🔍 Validasi data
+        // 🔍 Validasi data input dari form
         $validated = $request->validate([
-            'nama'       => 'required|string|max:255',
-            'nip'        => 'required|string|max:255',
-            'jabatan'    => 'required|string|max:255',
-            'unitKerja'  => 'required|string|max:255',
-            'tanggal'    => 'required|date',
-            'judul'      => 'required|string|max:255',
-            'narasumber' => 'required|string|max:255',
-            'ringkasan'  => 'required|string',
-            'catatan'    => 'required|string',
-            'saran'      => 'required|string',
+            'nama'                => 'required|string|max:255',
+            'npp'                 => 'required|string|max:255',
+            'pangkat'             => 'required|string|max:255',
+            'jabatan'             => 'required|string|max:255',
+            'unit_kerja'          => 'required|string|max:255',
+            'satuan_kerja'        => 'required|string|max:255',
+            'jenis_pembelajaran'  => 'required|string|max:255',
+            'nama_pembelajaran'   => 'required|string|max:255',
+            'tanggal'             => 'required|date',
+            'materi'              => 'required|string|max:255',
+            'narasumber'          => 'required|string|max:255',
+            'jam_pembelajaran'    => 'required|string|max:50',
+            'lesson_learned'      => 'required|string',
         ]);
 
         // 📄 Nama file PDF
-        $filename = 'Laporan_' . str_replace(' ', '_', $validated['nama']) . '_' . now()->format('Ymd_His') . '.pdf';
+        $filename = 'LessonLearned_' . str_replace(' ', '_', $validated['nama']) . '_' . now()->format('Ymd_His') . '.pdf';
         $dir = storage_path('app/public/laporan');
 
         // 🔧 Pastikan folder laporan ada
@@ -44,33 +47,34 @@ class FormLaporanController extends Controller
             mkdir($dir, 0777, true);
         }
 
-        // 🧾 Generate PDF
+        // 🧾 Generate PDF berdasarkan template Blade pdf.laporan
         $pdf = Pdf::loadView('pdf.laporan', ['data' => $validated])
             ->setPaper('A4', 'portrait');
 
-        // 💾 Simpan ke storage
+        // 💾 Simpan file PDF ke storage
         $pdf->save($dir . '/' . $filename);
 
-        // 🗃️ Simpan metadata ke database
+        // 🗃️ Simpan metadata ke database (tabel reports)
         $report = Report::create([
-            'tanggal'    => $validated['tanggal'],
-            'nama'       => $validated['nama'],
-            'nip'        => $validated['nip'],
-            'jabatan'    => $validated['jabatan'],
-            'unit_kerja' => $validated['unitKerja'],
-            'judul'      => $validated['judul'],
-            'narasumber' => $validated['narasumber'],
-            'ringkasan'  => $validated['ringkasan'],
-            'catatan'    => $validated['catatan'],
-            'saran'      => $validated['saran'],
-            'pdf_path'   => 'storage/laporan/' . $filename,
+            'tanggal'      => $validated['tanggal'],
+            'nama'         => $validated['nama'],
+            'nip'          => $validated['npp'],
+            'jabatan'      => $validated['jabatan'],
+            'unit_kerja'   => $validated['unit_kerja'],
+            'satuan_kerja' => $validated['satuan_kerja'],
+            'judul'        => $validated['nama_pembelajaran'],
+            'materi'       => $validated['materi'],
+            'ringkasan'    => $validated['lesson_learned'],
+            'catatan'      => null,
+            'saran'        => null,
+            'pdf_path'     => 'storage/laporan/' . $filename,
         ]);
 
-        // 🔁 Jika request AJAX, kirim JSON
+        // 🔁 Jika request AJAX, kirim respon JSON
         if ($request->ajax()) {
             return response()->json([
                 'success'       => true,
-                'message'       => 'Laporan berhasil dikirim & PDF berhasil dibuat!',
+                'message'       => 'Lesson Learned berhasil dikirim & PDF berhasil dibuat!',
                 'filename'      => $filename,
                 'download_link' => asset('storage/laporan/' . $filename),
             ]);
@@ -78,7 +82,7 @@ class FormLaporanController extends Controller
 
         // 📥 Jika non-AJAX (fallback lama)
         return redirect()->back()->with([
-            'success' => 'Laporan berhasil dikirim & PDF berhasil dibuat!',
+            'success' => 'Lesson Learned berhasil dikirim & PDF berhasil dibuat!',
             'download_link' => route('form.download', $report->id),
         ]);
     }
